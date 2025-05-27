@@ -63,21 +63,28 @@
 
       const fetchProducts = () => {
         setLoading(true);
+        setError(null);
         fetch(`${API_URL}/api/products`)
-          .then((res) => res.json())
+          .then((res) => {
+            if (!res.ok) throw new Error('Ошибка загрузки продуктов');
+            return res.json();
+          })
           .then((data) => {
             setProducts(data);
             setLoading(false);
           })
           .catch((err) => {
-            setError('Ошибка загрузки продуктов');
+            setError('Не удалось загрузить продукты. Попробуйте позже.');
             setLoading(false);
           });
       };
 
       const checkRegistration = (telegramId) => {
         fetch(`${API_URL}/api/registrations?telegramId=${telegramId}`)
-          .then((res) => res.json())
+          .then((res) => {
+            if (!res.ok) throw new Error('Ошибка проверки регистрации');
+            return res.json();
+          })
           .then((data) => {
             if (data.status === 'approved') setIsRegistered(true);
           })
@@ -128,7 +135,10 @@
               initData: isDevMode ? 'dev_mode' : window.Telegram?.WebApp?.initData,
             }),
           })
-            .then((res) => res.json())
+            .then((res) => {
+              if (!res.ok) throw new Error('Ошибка при регистрации');
+              return res.json();
+            })
             .then((data) => {
               setLoading(false);
               if (data.success) {
@@ -140,7 +150,7 @@
             })
             .catch((err) => {
               setLoading(false);
-              setError('Ошибка при регистрации');
+              setError('Не удалось зарегистрироваться. Попробуйте позже.');
             });
         };
 
@@ -228,7 +238,10 @@
             initData: isDevMode ? 'dev_mode' : window.Telegram?.WebApp?.initData,
           }),
         })
-          .then((res) => res.json())
+          .then((res) => {
+            if (!res.ok) throw new Error('Ошибка при создании заявки');
+            return res.json();
+          })
           .then((data) => {
             setLoading(false);
             if (data.success) {
@@ -240,7 +253,7 @@
           })
           .catch((err) => {
             setLoading(false);
-            setError('Ошибка при отправке заявки');
+            setError('Не удалось создать заявку. Попробуйте позже.');
           });
       };
 
