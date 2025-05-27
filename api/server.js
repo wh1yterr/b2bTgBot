@@ -342,5 +342,3 @@ app.get('/favicon.png', (req, res) => {
 //});
 
 module.exports = serverless(app);
-
-module.exports = app;
