@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -223,7 +223,7 @@ app.post('/api/registrations/:id', async (req, res) => {
     if (useMongoDB) {
       const registrationsCollection = db.collection('registrations');
       const result = await registrationsCollection.updateOne(
-        { id: parseInt(id) },
+        { _id: new ObjectId(id) },
         { $set: { status } }
       );
       if (result.matchedCount === 0) {
