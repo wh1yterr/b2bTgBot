@@ -21,8 +21,6 @@ app.use((err, req, res, next) => {
 
 // Аутентификация Telegram Web App (проверка initData)
 function verifyTelegramWebAppData(initData) {
-  // Для продакшена используйте bot token и crypto для проверки
-  // Пример: https://core.telegram.org/bots/webapps#validating-data-received-via-the-web-app
   return true; // Заглушка
 }
 
@@ -54,7 +52,7 @@ app.post('/api/orders', (req, res) => {
   }
   const order = { id: orders.length + 1, telegramId, productId, quantity, status: 'pending' };
   orders.push(order);
-  product.stock -= quantity; // Обновляем остаток
+  product.stock -= quantity;
   res.json({ success: true, order });
 });
 
@@ -109,6 +107,14 @@ app.delete('/api/products/:id', (req, res) => {
 // Тестовый эндпоинт
 app.get('/', (req, res) => {
   res.json({ message: 'API работает' });
+});
+
+// Вебхук для Telegram
+app.post('/webhook', (req, res) => {
+  const update = req.body;
+  // Передаем обновление в aiogram
+  bot.process_update(update);
+  res.sendStatus(200);
 });
 
 app.listen(port, () => {
