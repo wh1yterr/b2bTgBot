@@ -1,8 +1,16 @@
+//const express = require('express');
+//const bodyParser = require('body-parser');
+//const { MongoClient, ObjectId } = require('mongodb');
+//const app = express();
+//const port = process.env.PORT || 3000;
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const { MongoClient, ObjectId } = require('mongodb');
+const serverless = require('serverless-http');
 const app = express();
-const port = process.env.PORT || 3000;
+
+app.use(bodyParser.json());
 
 // Временное хранилище данных (на случай ошибки подключения к MongoDB)
 let registrations = [];
@@ -20,6 +28,11 @@ const uri = process.env.MONGODB_URI;
 const client = uri ? new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true }) : null;
 let db;
 let useMongoDB = true;
+
+if (!uri) {
+  console.error("❌ MONGODB_URI is not defined!");
+  process.exit(1);
+}
 
 // Проверка формата строки подключения
 function isValidMongoUri(uri) {
@@ -323,8 +336,10 @@ app.get('/favicon.png', (req, res) => {
   res.status(204).end();
 });
 
-app.listen(port, () => {
-  console.log(`Сервер запущен на порту ${port}`);
-});
+//app.listen(port, () => {
+//  console.log(`Сервер запущен на порту ${port}`);
+//});
+
+module.exports = serverless(app);
 
 module.exports = app;
