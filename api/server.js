@@ -9,6 +9,7 @@ const bodyParser = require('body-parser');
 const { MongoClient, ObjectId } = require('mongodb');
 const serverless = require('serverless-http');
 const app = express();
+require('dotenv').config();
 
 app.use(bodyParser.json());
 
