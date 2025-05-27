@@ -5,7 +5,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Подключение к MongoDB
-const uri = 'mongodb+srv://wh1ytettv:fireforce228@@cluster0.cejtnos.mongodb.net/'; // Замени на свою строку подключения
+const uri = 'mongodb+srv://wh1ytettv:fireforce228@cluster0.cejtnos.mongodb.net/'; // Замени на свою строку подключения
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 let db;
 
