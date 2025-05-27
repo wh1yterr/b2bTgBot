@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B2B Mini App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    function App() {
+      const [user, setUser] = React.useState(null);
+      const [products, setProducts] = React.useState([]);
+      const [formData, setFormData] = React.useState({ productId: '', quantity: '' });
+      const [isRegistered, setIsRegistered] = React.useState(false);
+
+      // Инициализация Telegram Web App
+      React.useEffect(() => {
+        if (window.Telegram.WebApp) {
+          window.Telegram.WebApp.ready();
+          setUser(window.Telegram.WebApp.initDataUnsafe.user);
+        }
+
+        // Загрузка продуктов (заглушка, замените на API-запрос)
+        setProducts([
+          { id: 1, name: 'Продукт A', stock: 100 },
+          { id: 2, name: 'Продукт B', stock: 50 },
+        ]);
+
+        // Проверка статуса регистрации (заглушка)
+        setIsRegistered(false); // Замените на проверку через API
+      }, []);
+
+      // Обработка формы регистрации
+      const handleRegister = () => {
+        // Отправка данных регистрации на сервер
+        fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ telegramId: user?.id, name: user?.first_name }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              setIsRegistered(true);
+              alert('Регистрация отправлена на подтверждение!');
+            }
+          })
+          .catch((err) => console.error(err));
+      };
+
+      // Обработка формы заявки
+      const handleOrderSubmit = (e) => {
+        e.preventDefault();
+        // Отправка заявки на сервер
+        fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...formData, telegramId: user?.id }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              alert('Заявка успешно создана!');
+              setFormData({ productId: '', quantity: '' });
+            }
+          })
+          .catch((err) => console.error(err));
+      };
+
+      // Если пользователь не авторизован в Telegram
+      if (!user) {
+        return <div className="p-4">Пожалуйста, откройте приложение в Telegram.</div>;
+      }
+
+      // Если пользователь не зарегистрирован
+      if (!isRegistered) {
+        return (
+          <div className="p-4 max-w-md mx-auto">
+            <h1 className="text-2xl font-bold mb-4">Регистрация B2B</h1>
+            <p>Добро пожаловать, {user.first_name}!</p>
+            <button
+              onClick={handleRegister}
+              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+            >
+              Зарегистрироваться
+            </button>
+          </div>
+        );
+      }
+
+      // Основной интерфейс для зарегистрированных пользователей
+      return (
+        <div className="p-4 max-w-md mx-auto">
+          <h1 className="text-2xl font-bold mb-4">B2B Заявки</h1>
+          <h2 className="text-lg mb-2">Продукты</h2>
+          <ul className="mb-4">
+            {products.map((product) => (
+              <li key={product.id} className="mb-2">
+                {product.name} (В наличии: {product.stock})
+              </li>
+            ))}
+          </ul>
+          <h2 className="text-lg mb-2">Создать заявку</h2>
+          <form onSubmit={handleOrderSubmit}>
+            <select
+              value={formData.productId}
+              onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+              className="w-full p-2 mb-2 border rounded"
+            >
+              <option value="">Выберите продукт</option>
+              {products.map((product) => (
+                <option key={product.id} value={product.id}>
+                  {product.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              value={formData.quantity}
+              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+              placeholder="Количество"
+              className="w-full p-2 mb-2 border rounded"
+            />
+            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
+              Отправить заявку
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
