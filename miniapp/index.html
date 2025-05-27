@@ -9,8 +9,17 @@
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+  </style>
 </head>
-<body>
+<body class="bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen">
   <div id="root"></div>
   <script type="text/babel">
     function App() {
@@ -18,7 +27,9 @@
       const [products, setProducts] = React.useState([]);
       const [formData, setFormData] = React.useState({ productId: '', quantity: '' });
       const [isRegistered, setIsRegistered] = React.useState(false);
-      const API_URL = 'https://b2b-tg-bot-5ru8.vercel.app'; // URL твоего API
+      const [loading, setLoading] = React.useState(false);
+      const [error, setError] = React.useState(null);
+      const API_URL = 'https://b2b-tg-bot-5ru8.vercel.app';
 
       // Режим разработчика: фиктивный пользователь для тестирования вне Telegram
       const isDevMode = new URLSearchParams(window.location.search).get('dev') === 'true';
@@ -29,67 +40,54 @@
 
       // Инициализация Telegram Web App
       React.useEffect(() => {
-        console.log('Проверяем Telegram WebApp...');
-        console.log('window.Telegram:', window.Telegram);
-        console.log('window.Telegram.WebApp:', window.Telegram?.WebApp);
-
         if (isDevMode) {
-          console.log('Запущен режим разработчика');
           setUser(devUser);
           fetchProducts();
           checkRegistration(devUser.id);
         } else if (window.Telegram && window.Telegram.WebApp) {
-          console.log('Telegram WebApp найден, инициализируем...');
           window.Telegram.WebApp.ready();
           const telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
-          console.log('Пользователь из Telegram:', telegramUser);
-          console.log('initData:', window.Telegram.WebApp.initData);
           setUser(telegramUser);
           fetchProducts();
           if (telegramUser?.id) {
             checkRegistration(telegramUser.id);
-          } else {
-            console.error('ID пользователя отсутствует');
           }
-        } else {
-          console.error('Telegram WebApp не найден');
         }
       }, []);
 
       const fetchProducts = () => {
+        setLoading(true);
         fetch(`${API_URL}/api/products`)
-          .then((res) => {
-            console.log('Статус ответа от API/products:', res.status);
-            return res.json();
-          })
+          .then((res) => res.json())
           .then((data) => {
-            console.log('Продукты:', data);
             setProducts(data);
+            setLoading(false);
           })
-          .catch((err) => console.error('Ошибка загрузки продуктов:', err));
+          .catch((err) => {
+            setError('Ошибка загрузки продуктов');
+            setLoading(false);
+          });
       };
 
       const checkRegistration = (telegramId) => {
         fetch(`${API_URL}/api/registrations?telegramId=${telegramId}`)
-          .then((res) => {
-            console.log('Статус ответа от API/registrations:', res.status);
-            return res.json();
-          })
+          .then((res) => res.json())
           .then((data) => {
-            console.log('Данные регистрации:', data);
             if (data.status === 'approved') setIsRegistered(true);
           })
-          .catch((err) => console.error('Ошибка проверки регистрации:', err));
+          .catch((err) => setError('Ошибка проверки регистрации'));
       };
 
       // Если пользователь не авторизован и не в режиме разработчика
       if (!user && !isDevMode) {
-        return <div className="p-4">Пожалуйста, откройте приложение в Telegram.</div>;
+        return <div className="p-4 text-center text-gray-600 fade-in">Пожалуйста, откройте приложение в Telegram.</div>;
       }
 
       // Если пользователь не зарегистрирован
       if (!isRegistered) {
         const handleRegister = () => {
+          setLoading(true);
+          setError(null);
           fetch(`${API_URL}/api/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -101,27 +99,37 @@
           })
             .then((res) => res.json())
             .then((data) => {
+              setLoading(false);
               if (data.success) {
                 alert('Регистрация отправлена на подтверждение!');
               } else {
-                alert('Ошибка при регистрации: ' + (data.error || 'Неизвестная ошибка'));
+                setError(data.error || 'Ошибка при регистрации');
               }
             })
-            .catch((err) => console.error('Ошибка регистрации:', err));
+            .catch((err) => {
+              setLoading(false);
+              setError('Ошибка при регистрации');
+            });
         };
 
         return (
-          <div className="p-4 max-w-md mx-auto">
-            <h1 className="text-2xl font-bold mb-4">Регистрация B2B</h1>
-            <p>Добро пожаловать, {user?.first_name || 'Пользователь'}!</p>
+          <div className="p-6 max-w-md mx-auto fade-in">
+            <h1 className="text-3xl font-bold text-gray-800 mb-4">Регистрация B2B</h1>
+            <p className="text-lg text-gray-600 mb-6">Добро пожаловать, {user?.first_name || 'Пользователь'}!</p>
+            {error && (
+              <div className="bg-red-100 text-red-700 p-3 rounded mb-4 fade-in">{error}</div>
+            )}
             <button
               onClick={handleRegister}
-              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+              disabled={loading}
+              className={`w-full bg-blue-600 text-white px-4 py-3 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              Зарегистрироваться
+              {loading ? 'Загрузка...' : 'Зарегистрироваться'}
             </button>
             {isDevMode && (
-              <p className="mt-2 text-red-500">Режим разработчика: данные фиктивные</p>
+              <p className="mt-4 text-sm text-red-500 fade-in">Режим разработчика: данные фиктивные</p>
             )}
           </div>
         );
@@ -130,6 +138,8 @@
       // Основной интерфейс для зарегистрированных пользователей
       const handleOrderSubmit = (e) => {
         e.preventDefault();
+        setLoading(true);
+        setError(null);
         fetch(`${API_URL}/api/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -141,54 +151,90 @@
         })
           .then((res) => res.json())
           .then((data) => {
+            setLoading(false);
             if (data.success) {
               alert('Заявка успешно создана!');
               setFormData({ productId: '', quantity: '' });
             } else {
-              alert(data.error || 'Ошибка при создании заявки');
+              setError(data.error || 'Ошибка при создании заявки');
             }
           })
-          .catch((err) => console.error('Ошибка отправки заявки:', err));
+          .catch((err) => {
+            setLoading(false);
+            setError('Ошибка при отправке заявки');
+          });
       };
 
       return (
-        <div className="p-4 max-w-md mx-auto">
-          <h1 className="text-2xl font-bold mb-4">B2B Заявки</h1>
-          <h2 className="text-lg mb-2">Продукты</h2>
-          <ul className="mb-4">
-            {products.map((product) => (
-              <li key={product.id} className="mb-2">
-                {product.name} (В наличии: {product.stock})
-              </li>
-            ))}
-          </ul>
-          <h2 className="text-lg mb-2">Создать заявку</h2>
-          <form onSubmit={handleOrderSubmit}>
-            <select
-              value={formData.productId}
-              onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-              className="w-full p-2 mb-2 border rounded"
+        <div className="p-6 max-w-md mx-auto fade-in">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">B2B Заявки</h1>
+          <h2 className="text-xl font-semibold text-gray-700 mb-3">Продукты</h2>
+          {error && (
+            <div className="bg-red-100 text-red-700 p-3 rounded mb-4 fade-in">{error}</div>
+          )}
+          <div className="space-y-3 mb-6">
+            {loading ? (
+              <div className="text-center text-gray-600">Загрузка продуктов...</div>
+            ) : products.length > 0 ? (
+              products.map((product) => (
+                <div
+                  key={product.id}
+                  className="bg-white p-4 rounded-lg shadow-sm flex justify-between items-center fade-in"
+                >
+                  <div>
+                    <p className="text-gray-800 font-medium">{product.name}</p>
+                    <p className="text-sm text-gray-500">В наличии: {product.stock}</p>
+                  </div>
+                  <span className="text-blue-600 font-semibold">#{product.id}</span>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-600">Продукты отсутствуют</div>
+            )}
+          </div>
+          <button
+            onClick={fetchProducts}
+            className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-lg mb-6 hover:bg-gray-300 transition-all duration-300"
+          >
+            Обновить список
+          </button>
+          <h2 className="text-xl font-semibold text-gray-700 mb-3">Создать заявку</h2>
+          <form onSubmit={handleOrderSubmit} className="space-y-4">
+            <div>
+              <select
+                value={formData.productId}
+                onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300"
+              >
+                <option value="">Выберите продукт</option>
+                {products.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <input
+                type="number"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                placeholder="Количество"
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full bg-blue-600 text-white px-4 py-3 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              <option value="">Выберите продукт</option>
-              {products.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-              placeholder="Количество"
-              className="w-full p-2 mb-2 border rounded"
-            />
-            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-              Отправить заявку
+              {loading ? 'Отправка...' : 'Отправить заявку'}
             </button>
           </form>
           {isDevMode && (
-            <p className="mt-2 text-red-500">Режим разработчика: данные фиктивные</p>
+            <p className="mt-4 text-sm text-red-500 fade-in">Режим разработчика: данные фиктивные</p>
           )}
         </div>
       );
