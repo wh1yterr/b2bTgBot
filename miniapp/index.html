@@ -29,6 +29,12 @@
       const [isRegistered, setIsRegistered] = React.useState(false);
       const [loading, setLoading] = React.useState(false);
       const [error, setError] = React.useState(null);
+      const [regFormData, setRegFormData] = React.useState({
+        email: '',
+        companyName: '',
+        phone: '',
+      });
+      const [regErrors, setRegErrors] = React.useState({});
       const API_URL = 'https://b2b-tg-bot-5ru8.vercel.app';
 
       // Режим разработчика: фиктивный пользователь для тестирования вне Telegram
@@ -78,14 +84,36 @@
           .catch((err) => setError('Ошибка проверки регистрации'));
       };
 
+      // Валидация формы регистрации
+      const validateRegForm = () => {
+        const errors = {};
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!regFormData.email) {
+          errors.email = 'Email обязателен';
+        } else if (!emailRegex.test(regFormData.email)) {
+          errors.email = 'Неверный формат email';
+        }
+        if (!regFormData.companyName) {
+          errors.companyName = 'Название компании обязательно';
+        }
+        if (!regFormData.phone) {
+          errors.phone = 'Телефон обязателен';
+        } else if (!/^\+?\d{10,15}$/.test(regFormData.phone)) {
+          errors.phone = 'Неверный формат телефона';
+        }
+        setRegErrors(errors);
+        return Object.keys(errors).length === 0;
+      };
+
       // Если пользователь не авторизован и не в режиме разработчика
       if (!user && !isDevMode) {
         return <div className="p-4 text-center text-gray-600 fade-in">Пожалуйста, откройте приложение в Telegram.</div>;
       }
 
-      // Если пользователь не зарегистрирован
+      // Форма регистрации
       if (!isRegistered) {
         const handleRegister = () => {
+          if (!validateRegForm()) return;
           setLoading(true);
           setError(null);
           fetch(`${API_URL}/api/register`, {
@@ -94,6 +122,9 @@
             body: JSON.stringify({
               telegramId: user?.id,
               name: user?.first_name,
+              email: regFormData.email,
+              companyName: regFormData.companyName,
+              phone: regFormData.phone,
               initData: isDevMode ? 'dev_mode' : window.Telegram?.WebApp?.initData,
             }),
           })
@@ -101,7 +132,8 @@
             .then((data) => {
               setLoading(false);
               if (data.success) {
-                alert('Регистрация отправлена на подтверждение!');
+                setError('Регистрация отправлена на подтверждение!');
+                setRegFormData({ email: '', companyName: '', phone: '' });
               } else {
                 setError(data.error || 'Ошибка при регистрации');
               }
@@ -117,17 +149,64 @@
             <h1 className="text-3xl font-bold text-gray-800 mb-4">Регистрация B2B</h1>
             <p className="text-lg text-gray-600 mb-6">Добро пожаловать, {user?.first_name || 'Пользователь'}!</p>
             {error && (
-              <div className="bg-red-100 text-red-700 p-3 rounded mb-4 fade-in">{error}</div>
+              <div className={`p-3 rounded mb-4 fade-in ${
+                error.includes('успешно') || error.includes('подтверждение')
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-red-100 text-red-700'
+              }`}>
+                {error}
+              </div>
             )}
-            <button
-              onClick={handleRegister}
-              disabled={loading}
-              className={`w-full bg-blue-600 text-white px-4 py-3 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 ${
-                loading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {loading ? 'Загрузка...' : 'Зарегистрироваться'}
-            </button>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={regFormData.email}
+                  onChange={(e) => setRegFormData({ ...regFormData, email: e.target.value })}
+                  placeholder="example@domain.com"
+                  className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300"
+                />
+                {regErrors.email && (
+                  <p className="text-red-500 text-sm mt-1 fade-in">{regErrors.email}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-gray-700 mb-1">Название компании</label>
+                <input
+                  type="text"
+                  value={regFormData.companyName}
+                  onChange={(e) => setRegFormData({ ...regFormData, companyName: e.target.value })}
+                  placeholder="ООО Пример"
+                  className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300"
+                />
+                {regErrors.companyName && (
+                  <p className="text-red-500 text-sm mt-1 fade-in">{regErrors.companyName}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-gray-700 mb-1">Телефон</label>
+                <input
+                  type="tel"
+                  value={regFormData.phone}
+                  onChange={(e) => setRegFormData({ ...regFormData, phone: e.target.value })}
+                  placeholder="+79991234567"
+                  className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300"
+                />
+                {regErrors.phone && (
+                  <p className="text-red-500 text-sm mt-1 fade-in">{regErrors.phone}</p>
+                )}
+              </div>
+              <button
+                onClick={handleRegister}
+                disabled={loading}
+                className={`w-full bg-blue-600 text-white px-4 py-3 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 ${
+                  loading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {loading ? 'Загрузка...' : 'Зарегистрироваться'}
+              </button>
+            </div>
             {isDevMode && (
               <p className="mt-4 text-sm text-red-500 fade-in">Режим разработчика: данные фиктивные</p>
             )}
@@ -153,7 +232,7 @@
           .then((data) => {
             setLoading(false);
             if (data.success) {
-              alert('Заявка успешно создана!');
+              setError('Заявка успешно создана!');
               setFormData({ productId: '', quantity: '' });
             } else {
               setError(data.error || 'Ошибка при создании заявки');
@@ -170,7 +249,11 @@
           <h1 className="text-3xl font-bold text-gray-800 mb-4">B2B Заявки</h1>
           <h2 className="text-xl font-semibold text-gray-700 mb-3">Продукты</h2>
           {error && (
-            <div className="bg-red-100 text-red-700 p-3 rounded mb-4 fade-in">{error}</div>
+            <div className={`p-3 rounded mb-4 fade-in ${
+              error.includes('успешно') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            }`}>
+              {error}
+            </div>
           )}
           <div className="space-y-3 mb-6">
             {loading ? (

@@ -26,7 +26,7 @@ function verifyTelegramWebAppData(initData) {
 
 // Регистрация пользователя
 app.post('/api/register', (req, res) => {
-  const { telegramId, name, initData } = req.body;
+  const { telegramId, name, email, companyName, phone, initData } = req.body;
   if (!verifyTelegramWebAppData(initData)) {
     return res.status(401).json({ success: false, error: 'Неверный initData' });
   }
@@ -34,6 +34,9 @@ app.post('/api/register', (req, res) => {
     id: registrations.length + 1,
     telegramId,
     name,
+    email,
+    companyName,
+    phone,
     status: 'pending',
   };
   registrations.push(registration);
@@ -107,14 +110,6 @@ app.delete('/api/products/:id', (req, res) => {
 // Тестовый эндпоинт
 app.get('/', (req, res) => {
   res.json({ message: 'API работает' });
-});
-
-// Вебхук для Telegram
-app.post('/webhook', (req, res) => {
-  const update = req.body;
-  // Передаем обновление в aiogram
-  bot.process_update(update);
-  res.sendStatus(200);
 });
 
 app.listen(port, () => {
