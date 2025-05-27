@@ -18,7 +18,7 @@
       const [products, setProducts] = React.useState([]);
       const [formData, setFormData] = React.useState({ productId: '', quantity: '' });
       const [isRegistered, setIsRegistered] = React.useState(false);
-      const API_URL = 'https://your-api.vercel.app'; // Замените на ваш URL API
+      const API_URL = 'https://b2b-tg-bot-api.vercel.app'; // Замените на URL вашего API
 
       // Инициализация Telegram Web App
       React.useEffect(() => {
@@ -141,7 +141,7 @@
               placeholder="Количество"
               className="w-full p-2 mb-2 border rounded"
             />
-            <button type="submit" className="bg-blue-500talk">
+            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
               Отправить заявку
             </button>
           </form>

@@ -13,6 +13,12 @@ let orders = [];
 
 app.use(bodyParser.json());
 
+// Базовая обработка ошибок
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
+});
+
 // Аутентификация Telegram Web App (проверка initData)
 function verifyTelegramWebAppData(initData) {
   // Для продакшена используйте bot token и crypto для проверки
@@ -24,7 +30,7 @@ function verifyTelegramWebAppData(initData) {
 app.post('/api/register', (req, res) => {
   const { telegramId, name, initData } = req.body;
   if (!verifyTelegramWebAppData(initData)) {
-    return res.status(401).json({ success: false, error: 'Invalid initData' });
+    return res.status(401).json({ success: false, error: 'Неверный initData' });
   }
   const registration = {
     id: registrations.length + 1,
@@ -40,7 +46,7 @@ app.post('/api/register', (req, res) => {
 app.post('/api/orders', (req, res) => {
   const { telegramId, productId, quantity, initData } = req.body;
   if (!verifyTelegramWebAppData(initData)) {
-    return res.status(401).json({ success: false, error: 'Invalid initData' });
+    return res.status(401).json({ success: false, error: 'Неверный initData' });
   }
   const product = products.find((p) => p.id === parseInt(productId));
   if (!product || product.stock < quantity) {
@@ -100,6 +106,13 @@ app.delete('/api/products/:id', (req, res) => {
   res.json({ success: true });
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+// Тестовый эндпоинт
+app.get('/', (req, res) => {
+  res.json({ message: 'API работает' });
 });
+
+app.listen(port, () => {
+  console.log(`Сервер запущен на порту ${port}`);
+});
+
+module.exports = app;
