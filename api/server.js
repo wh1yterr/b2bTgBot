@@ -335,4 +335,8 @@ app.use(async (req, res, next) => {
   console.timeEnd(`Request ${req.path}`);
 });
 
+app.get('/api', (req, res) => {
+  res.json({ status: 'API is working' });
+});
+
 module.exports = serverless(app);
