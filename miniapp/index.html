@@ -29,43 +29,58 @@
 
       // Инициализация Telegram Web App
       React.useEffect(() => {
-        if (isDevMode) {
-          // В режиме разработчика используем фиктивного пользователя
-          setUser(devUser);
-          // Загрузка продуктов
-          fetch(`${API_URL}/api/products`)
-            .then((res) => res.json())
-            .then((data) => setProducts(data))
-            .catch((err) => console.error('Ошибка загрузки продуктов:', err));
+        console.log('Проверяем Telegram WebApp...');
+        console.log('window.Telegram:', window.Telegram);
+        console.log('window.Telegram.WebApp:', window.Telegram?.WebApp);
 
-          // Проверка статуса регистрации
-          fetch(`${API_URL}/api/registrations?telegramId=${devUser.id}`)
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.status === 'approved') setIsRegistered(true);
-            })
-            .catch((err) => console.error('Ошибка проверки регистрации:', err));
-        } else if (window.Telegram.WebApp) {
+        if (isDevMode) {
+          console.log('Запущен режим разработчика');
+          setUser(devUser);
+          fetchProducts();
+          checkRegistration(devUser.id);
+        } else if (window.Telegram && window.Telegram.WebApp) {
+          console.log('Telegram WebApp найден, инициализируем...');
           window.Telegram.WebApp.ready();
           const telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
+          console.log('Пользователь из Telegram:', telegramUser);
+          console.log('initData:', window.Telegram.WebApp.initData);
           setUser(telegramUser);
-          const initData = window.Telegram.WebApp.initData;
-
-          // Загрузка продуктов
-          fetch(`${API_URL}/api/products`)
-            .then((res) => res.json())
-            .then((data) => setProducts(data))
-            .catch((err) => console.error('Ошибка загрузки продуктов:', err));
-
-          // Проверка статуса регистрации
-          fetch(`${API_URL}/api/registrations?telegramId=${telegramUser?.id}`)
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.status === 'approved') setIsRegistered(true);
-            })
-            .catch((err) => console.error('Ошибка проверки регистрации:', err));
+          fetchProducts();
+          if (telegramUser?.id) {
+            checkRegistration(telegramUser.id);
+          } else {
+            console.error('ID пользователя отсутствует');
+          }
+        } else {
+          console.error('Telegram WebApp не найден');
         }
       }, []);
+
+      const fetchProducts = () => {
+        fetch(`${API_URL}/api/products`)
+          .then((res) => {
+            console.log('Статус ответа от API/products:', res.status);
+            return res.json();
+          })
+          .then((data) => {
+            console.log('Продукты:', data);
+            setProducts(data);
+          })
+          .catch((err) => console.error('Ошибка загрузки продуктов:', err));
+      };
+
+      const checkRegistration = (telegramId) => {
+        fetch(`${API_URL}/api/registrations?telegramId=${telegramId}`)
+          .then((res) => {
+            console.log('Статус ответа от API/registrations:', res.status);
+            return res.json();
+          })
+          .then((data) => {
+            console.log('Данные регистрации:', data);
+            if (data.status === 'approved') setIsRegistered(true);
+          })
+          .catch((err) => console.error('Ошибка проверки регистрации:', err));
+      };
 
       // Если пользователь не авторизован и не в режиме разработчика
       if (!user && !isDevMode) {
@@ -81,7 +96,7 @@
             body: JSON.stringify({
               telegramId: user?.id,
               name: user?.first_name,
-              initData: isDevMode ? 'dev_mode' : window.Telegram.WebApp.initData,
+              initData: isDevMode ? 'dev_mode' : window.Telegram?.WebApp?.initData,
             }),
           })
             .then((res) => res.json())
@@ -121,7 +136,7 @@
           body: JSON.stringify({
             ...formData,
             telegramId: user?.id,
-            initData: isDevMode ? 'dev_mode' : window.Telegram.WebApp.initData,
+            initData: isDevMode ? 'dev_mode' : window.Telegram?.WebApp?.initData,
           }),
         })
           .then((res) => res.json())
