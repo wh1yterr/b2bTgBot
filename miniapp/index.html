@@ -18,52 +18,101 @@
       const [products, setProducts] = React.useState([]);
       const [formData, setFormData] = React.useState({ productId: '', quantity: '' });
       const [isRegistered, setIsRegistered] = React.useState(false);
-      const API_URL = 'https://b2b-tg-bot-api.vercel.app'; // Замените на URL вашего API
+      const API_URL = 'https://b2b-tg-bot-5ru8.vercel.app'; // URL твоего API
+
+      // Режим разработчика: фиктивный пользователь для тестирования вне Telegram
+      const isDevMode = new URLSearchParams(window.location.search).get('dev') === 'true';
+      const devUser = {
+        id: 123456789,
+        first_name: 'Тестовый Пользователь',
+      };
 
       // Инициализация Telegram Web App
       React.useEffect(() => {
-        if (window.Telegram.WebApp) {
+        if (isDevMode) {
+          // В режиме разработчика используем фиктивного пользователя
+          setUser(devUser);
+          // Загрузка продуктов
+          fetch(`${API_URL}/api/products`)
+            .then((res) => res.json())
+            .then((data) => setProducts(data))
+            .catch((err) => console.error('Ошибка загрузки продуктов:', err));
+
+          // Проверка статуса регистрации
+          fetch(`${API_URL}/api/registrations?telegramId=${devUser.id}`)
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.status === 'approved') setIsRegistered(true);
+            })
+            .catch((err) => console.error('Ошибка проверки регистрации:', err));
+        } else if (window.Telegram.WebApp) {
           window.Telegram.WebApp.ready();
-          setUser(window.Telegram.WebApp.initDataUnsafe.user);
+          const telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
+          setUser(telegramUser);
           const initData = window.Telegram.WebApp.initData;
 
           // Загрузка продуктов
           fetch(`${API_URL}/api/products`)
             .then((res) => res.json())
             .then((data) => setProducts(data))
-            .catch((err) => console.error(err));
+            .catch((err) => console.error('Ошибка загрузки продуктов:', err));
 
           // Проверка статуса регистрации
-          fetch(`${API_URL}/api/registrations?telegramId=${window.Telegram.WebApp.initDataUnsafe.user?.id}`)
+          fetch(`${API_URL}/api/registrations?telegramId=${telegramUser?.id}`)
             .then((res) => res.json())
             .then((data) => {
               if (data.status === 'approved') setIsRegistered(true);
             })
-            .catch((err) => console.error(err));
+            .catch((err) => console.error('Ошибка проверки регистрации:', err));
         }
       }, []);
 
-      // Обработка формы регистрации
-      const handleRegister = () => {
-        fetch(`${API_URL}/api/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            telegramId: user?.id,
-            name: user?.first_name,
-            initData: window.Telegram.WebApp.initData,
-          }),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.success) {
-              alert('Регистрация отправлена на подтверждение!');
-            }
-          })
-          .catch((err) => console.error(err));
-      };
+      // Если пользователь не авторизован и не в режиме разработчика
+      if (!user && !isDevMode) {
+        return <div className="p-4">Пожалуйста, откройте приложение в Telegram.</div>;
+      }
 
-      // Обработка формы заявки
+      // Если пользователь не зарегистрирован
+      if (!isRegistered) {
+        const handleRegister = () => {
+          fetch(`${API_URL}/api/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              telegramId: user?.id,
+              name: user?.first_name,
+              initData: isDevMode ? 'dev_mode' : window.Telegram.WebApp.initData,
+            }),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.success) {
+                alert('Регистрация отправлена на подтверждение!');
+              } else {
+                alert('Ошибка при регистрации: ' + (data.error || 'Неизвестная ошибка'));
+              }
+            })
+            .catch((err) => console.error('Ошибка регистрации:', err));
+        };
+
+        return (
+          <div className="p-4 max-w-md mx-auto">
+            <h1 className="text-2xl font-bold mb-4">Регистрация B2B</h1>
+            <p>Добро пожаловать, {user?.first_name || 'Пользователь'}!</p>
+            <button
+              onClick={handleRegister}
+              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+            >
+              Зарегистрироваться
+            </button>
+            {isDevMode && (
+              <p className="mt-2 text-red-500">Режим разработчика: данные фиктивные</p>
+            )}
+          </div>
+        );
+      }
+
+      // Основной интерфейс для зарегистрированных пользователей
       const handleOrderSubmit = (e) => {
         e.preventDefault();
         fetch(`${API_URL}/api/orders`, {
@@ -72,7 +121,7 @@
           body: JSON.stringify({
             ...formData,
             telegramId: user?.id,
-            initData: window.Telegram.WebApp.initData,
+            initData: isDevMode ? 'dev_mode' : window.Telegram.WebApp.initData,
           }),
         })
           .then((res) => res.json())
@@ -84,31 +133,9 @@
               alert(data.error || 'Ошибка при создании заявки');
             }
           })
-          .catch((err) => console.error(err));
+          .catch((err) => console.error('Ошибка отправки заявки:', err));
       };
 
-      // Если пользователь не авторизован в Telegram
-      if (!user) {
-        return <div className="p-4">Пожалуйста, откройте приложение в Telegram.</div>;
-      }
-
-      // Если пользователь не зарегистрирован
-      if (!isRegistered) {
-        return (
-          <div className="p-4 max-w-md mx-auto">
-            <h1 className="text-2xl font-bold mb-4">Регистрация B2B</h1>
-            <p>Добро пожаловать, {user.first_name}!</p>
-            <button
-              onClick={handleRegister}
-              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
-            >
-              Зарегистрироваться
-            </button>
-          </div>
-        );
-      }
-
-      // Основной интерфейс для зарегистрированных пользователей
       return (
         <div className="p-4 max-w-md mx-auto">
           <h1 className="text-2xl font-bold mb-4">B2B Заявки</h1>
@@ -145,6 +172,9 @@
               Отправить заявку
             </button>
           </form>
+          {isDevMode && (
+            <p className="mt-2 text-red-500">Режим разработчика: данные фиктивные</p>
+          )}
         </div>
       );
     }
