@@ -22,7 +22,6 @@ let products = [
 ];
 let orders = [];
 
-app.use(bodyParser.json());
 
 // Подключение к MongoDB
 const uri = process.env.MONGODB_URI;
@@ -81,13 +80,6 @@ async function connectToMongo() {
   }
 }
 
-if (client) connectToMongo();
-
-// Базовая обработка ошибок
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
-});
 
 // Аутентификация Telegram Web App (проверка initData)
 function verifyTelegramWebAppData(initData) {
@@ -186,7 +178,7 @@ app.get('/api/products', async (req, res) => {
   try {
     if (useMongoDB) {
       const productsCollection = db.collection('products');
-      const productsList = await productsCollection.find({}).toArray();
+      const productsList = await productsCollection.find({}).limit(100).toArray(); // Ограничение
       res.json(productsList);
     } else {
       res.json(products);
@@ -337,8 +329,10 @@ app.get('/favicon.png', (req, res) => {
   res.status(204).end();
 });
 
-//app.listen(port, () => {
-//  console.log(`Сервер запущен на порту ${port}`);
-//});
+app.use(async (req, res, next) => {
+  console.time(`Request ${req.path}`);
+  next();
+  console.timeEnd(`Request ${req.path}`);
+});
 
 module.exports = serverless(app);
