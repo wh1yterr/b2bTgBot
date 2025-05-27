@@ -253,7 +253,6 @@ app.post('/api/products', async (req, res) => {
     if (useMongoDB) {
       const productsCollection = db.collection('products');
       const result = await productsCollection.insertOne(product);
-      product.id = result.insertedId;
     } else {
       products.push(product);
     }
