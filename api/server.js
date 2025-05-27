@@ -16,12 +16,23 @@ let orders = [];
 app.use(bodyParser.json());
 
 // Подключение к MongoDB
-const uri = process.env.MONGODB_URI || 'mongodb+srv://wh1ytettv:fireforce228@cluster0.cejtnos.mongodb.net/';
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+const uri = process.env.MONGODB_URI;
+const client = uri ? new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true }) : null;
 let db;
 let useMongoDB = true;
 
+// Проверка формата строки подключения
+function isValidMongoUri(uri) {
+  if (!uri) return false;
+  return uri.startsWith('mongodb+srv://') && uri.includes('@') && uri.includes('.mongodb.net/');
+}
+
 async function connectToMongo() {
+  if (!client || !isValidMongoUri(uri)) {
+    console.error('Некорректная строка подключения MongoDB:', uri);
+    useMongoDB = false;
+    return;
+  }
   try {
     await client.connect();
     db = client.db('b2b_tg_bot');
@@ -56,7 +67,7 @@ async function connectToMongo() {
   }
 }
 
-connectToMongo();
+if (client) connectToMongo();
 
 // Базовая обработка ошибок
 app.use((err, req, res, next) => {
@@ -302,6 +313,15 @@ app.delete('/api/products/:id', async (req, res) => {
 // Тестовый эндпоинт
 app.get('/', (req, res) => {
   res.json({ message: 'API работает' });
+});
+
+// Обработка запросов favicon
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+app.get('/favicon.png', (req, res) => {
+  res.status(204).end();
 });
 
 app.listen(port, () => {
